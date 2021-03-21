@@ -8,7 +8,7 @@ const formidable = require("express-formidable");
 const mongoose = require("mongoose");
 
 // Database connection
-mongoose.connect("mongodb://localhost/vinted", {
+mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
   useFindAndModify: false,
@@ -38,6 +38,6 @@ app.all("*", (req, res) => {
 });
 
 // Launch server
-app.listen(process.env.PORT, () => {
+app.listen(3150, () => {
   console.log("3... 2... 1... VINTED LAUNCHED TO THE MOOOOOOOOOOOOOOOON!!!");
 });
