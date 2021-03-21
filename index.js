@@ -38,6 +38,6 @@ app.all("*", (req, res) => {
 });
 
 // Launch server
-app.listen(3150, () => {
+app.listen(process.env.PORT, () => {
   console.log("3... 2... 1... VINTED LAUNCHED TO THE MOOOOOOOOOOOOOOOON!!!");
 });
