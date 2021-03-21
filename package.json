@@ -20,6 +20,7 @@
     "express-formidable": "^1.2.0",
     "heroku": "^7.47.0",
     "mongoose": "^5.10.11",
+    "stripe": "^8.132.0",
     "uid2": "0.0.3"
   }
 }

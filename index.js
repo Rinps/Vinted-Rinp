@@ -11,7 +11,8 @@ const mongoose = require("mongoose");
 mongoose.connect("mongodb://localhost/vinted", {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  useCreateIndexes: true,
+  useFindAndModify: false,
+  useCreateIndex: true,
 });
 
 // Initialize server
@@ -26,6 +27,9 @@ app.use(userRoutes);
 const offerRoutes = require("./routes/offer");
 app.use(offerRoutes);
 
+const paymentRoutes = require("./routes/payment");
+app.use(paymentRoutes);
+
 // Catch non defined routes
 app.all("*", (req, res) => {
   res
@@ -34,6 +38,6 @@ app.all("*", (req, res) => {
 });
 
 // Launch server
-app.listen(3000, () => {
+app.listen(process.env.PORT, () => {
   console.log("3... 2... 1... VINTED LAUNCHED TO THE MOOOOOOOOOOOOOOOON!!!");
 });

@@ -18,29 +18,33 @@ const User = require("../models/User");
 const Offer = require("../models/Offer");
 
 // Define routes
+// Allow a user to publish an announcement. Requires a Header (Authorization Bearer Token) and these BODY parameters: "title" (String), "description" (String), "price" (Number), "picture" (optionnal, file) and "size" (optionnal, text) and "dreamFactor ((really) optionnal, text)".
 router.post("/offers/publish", isAuthenticated, async (req, res) => {
-  // Allow a user to publish an announcement. Requires a Header (Authorization Bearer Token) and these BODY parameters: "title" (String), "description" (String), "price" (Number), "details" (optionnal, Array) and "picture" (optionnal, File).
   try {
     // Extract every parameters and stores them in variables.
-    const { title, description, price, details } = req.fields;
+    const { title, description, price, size, dreamFactor } = req.fields;
     const user = req.user;
     // Check if there's a title, description, price and user in res (user has been added in it during the authentification process).
     if (!title || !description || !price || !user) {
       res.status(400).json({ message: "Missing parameter in the request." });
     } else {
       // Check if the parameters do not exceed the range of what we allow users to input.
-      if (title.length <= 50 && description.length <= 500 && price <= 100000) {
+      if (
+        title.length <= 50 &&
+        description.length <= 500 &&
+        price <= 10000000
+      ) {
         // If we're OK, create the new offer and saves it in the database.
         const newOffer = new Offer({
           productName: title,
           productDescription: description,
           productPrice: price,
-          productDetails: details,
+          productDetails: { size: size, Dream_factor: dreamFactor },
           owner: user,
         });
         await newOffer.save();
 
-        // Create a result variable in ordre to return a readable information to the user.
+        // Create a result variable in order to return a readable information to the user.
         const result = await Offer.findOne({ productName: title })
           .populate("owner")
           .populate("account");
@@ -57,7 +61,6 @@ router.post("/offers/publish", isAuthenticated, async (req, res) => {
             public_id: offerId,
             overwrite: false,
           });
-          console.log(resultPicture);
           newOffer.productImage = resultPicture.secure_url;
           await newOffer.save();
         }
@@ -74,14 +77,24 @@ router.post("/offers/publish", isAuthenticated, async (req, res) => {
   }
 });
 
+// Display the whole offers database to the user.
 router.get("/offers", async (req, res) => {
-  // Display offers depending of various parameters. Requires at least one of these QUERY parameters: "title" (String), "priceMin" (Number), "priceMax" (Number) and "sort" (either "price-desc" or "price-asc"), as well as a mandatory parameter: "page" (Number).
+  try {
+    const offers = await Offer.find();
+    res.status(200).json(offers);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// Display offers depending of various parameters. Requires at least one of these QUERY parameters: "title" (String), "priceMin" (Number), "priceMax" (Number) and "sort" (either "price-desc" or "price-asc"), as well as a mandatory parameter: "page" (Number).
+router.get("/offers/search", async (req, res) => {
   try {
     // Start by getting the parameters from the request. A lot of them will be store in a variable, as the program will have to fix their value if it hasn't been given.
     const { title, sort } = req.query;
-    let { priceMin, priceMax, page } = req.query;
+    let { priceMin, priceMax, page, offersLimit } = req.query;
     let howToSort;
-    const offersByPage = 2;
+    const offersByPage = parseInt(offersLimit);
 
     // If priceMin, priceMax and sort have not been given, give them a value matching our database limit values.
     if (!priceMin) {
@@ -89,28 +102,20 @@ router.get("/offers", async (req, res) => {
     }
 
     if (!priceMax) {
-      priceMax = 100000.0;
+      priceMax = 1000000000.0;
     }
-    console.log("sort : ", sort);
 
     if (sort === "price-desc") {
-      console.log("test1");
       howToSort = { productPrice: "desc" };
     } else if (sort === "price-asc") {
-      console.log("test2");
       howToSort = { productPrice: "asc" };
     } else {
-      console.log("test3");
       howToSort = {};
     }
 
     if (!page) {
       page = 0;
     }
-
-    console.log("priceMin : ", Number(priceMin));
-    console.log("priceMax : ", Number(priceMax));
-    console.log("sort : ", howToSort);
 
     if (title) {
       const offersToDisplay = await Offer.find({
@@ -137,16 +142,69 @@ router.get("/offers", async (req, res) => {
   }
 });
 
+// Display a single offer based on the id the client gives.
 router.get("/offer/:id", async (req, res) => {
   try {
     const offer = await Offer.findById(req.params.id).populate({
       path: "owner",
       select: "account",
     });
-    console.log(offer);
     res.status(200).json(offer);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 });
+
+// Update and offer. Require at least one of these BODY parameters: id (Mongoose ID, mandatory) name (String), description (String), price (Number), size (String), dream_factor (String, this one is for the joke!), image (File, not working for now).
+router.put("/offer/update", isAuthenticated, async (req, res) => {
+  try {
+    // Extract the parameters and store them into a variable.
+    const {
+      id,
+      name,
+      description,
+      price,
+      size,
+      dream_factor,
+      picture,
+    } = req.fields;
+
+    if (id || name || description || price || size || dream_factor || picture) {
+      const offer = await Offer.findById(id);
+      const owner = await User.findById(offer.owner);
+
+      if (owner.token === req.user.token) {
+        if (name) {
+          offer.name = name;
+        }
+        if (description) {
+          offer.description = description;
+        }
+        if (price) {
+          offer.price = price;
+        }
+        if (size && !dream_factor) {
+          offer.productDetail = { size: size };
+        }
+        if (dream_factor && !size) {
+          offer.productDetail = { dream_factor: dream_factor };
+        }
+        if (size && dream_factor) {
+          offer.productDetail = { size: size, dream_factor: dream_factor };
+        }
+        await offer.save();
+        res.status(200).json(offer);
+      } else {
+        res.status(400).json({ message: "Permission not granted" });
+      }
+    } else {
+      res
+        .status(400)
+        .json({ message: "No parameter to update in the request." });
+    }
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
 module.exports = router;
