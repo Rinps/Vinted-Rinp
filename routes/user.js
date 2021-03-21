@@ -19,7 +19,7 @@ const isAuthenticated = require("../middleware/isAuthenticated");
 
 // Routes definition
 
-// Allow a user to create an acount. Require these BODY parameters: "name" (String), "mail" (String) and "password" (String). Also takes a picture parameter (File)
+// Allow a user to create an acount. Require these BODY parameters: "userName" (String), "userMail" (String) and "userPassword" (String). Also takes a picture parameter (File)
 router.post("/user/signup", async (req, res) => {
   try {
     // Get informations out of the request and check if correct BODY parameters have been given.
@@ -99,7 +99,11 @@ router.post("/user/signup", async (req, res) => {
 router.get("/users", async (req, res) => {
   try {
     const users = await User.find();
-    res.status(200).json(users);
+    const response = [];
+    for (let i = 0; i < users.length; i++) {
+      response.push({ account: users[i].account });
+    }
+    res.status(200).json(response);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
