@@ -101,7 +101,7 @@ router.get("/users", async (req, res) => {
     const users = await User.find();
     const response = [];
     for (let i = 0; i < users.length; i++) {
-      response.push({ account: users[i].account });
+      response.push({ account: users[i].account, id : users[i]._id });
     }
     res.status(200).json(response);
   } catch (error) {
